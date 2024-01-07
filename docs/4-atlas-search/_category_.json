@@ -1,0 +1,8 @@
+{
+  "label": "Add atlas search vector index",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "description": "In this section, we'll add data and Atlas search to enable full text searching in our application"
+  }
+}

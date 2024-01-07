@@ -1,0 +1,75 @@
+/**
+ * CSS files with the .module.css suffix will be treated as CSS modules
+ * and scoped locally.
+ */
+
+.heroBanner {
+  padding: 4rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 2rem;
+  }
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+contactDetailsPopup {
+  /* Your existing styles for the parent container */
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+.formRow {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+}
+
+label {
+  font-weight: bold;
+}
+
+input {
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+button {
+  padding: 10px 20px;
+  background-color: #205d3b;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.skipReg {
+  
+  color: #205d3b;
+  text-decoration: none;
+  font-size: small;
+  
+}
+
+.skipReg:hover {
+  color: #29d5b0
+}
+.startPoint{
+  
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}

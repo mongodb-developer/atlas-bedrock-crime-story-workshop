@@ -1,0 +1,128 @@
+---
+sidebar_position: 2
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+# Create Values & Secrets
+
+We will use the app services to create a **Value** and a **Secret** for AWS access and secret keys to access our Bedrock modules.
+
+Navigate to the **Values** section and click **Add a Value** by following this configuration:
+
+**Secrets**
+- **Name**: `AWS_ACCESS_KEY`
+- **Value**: `<YOUR_ACCESS_KEY>`
+
+- **Name**: `AWS_SECRET_KEY`
+- **Value**: `<YOUR_SECRET_KEY>`
+
+**Values**:
+- **Name**: `AWS_ACCESS_KEY`
+- **Link to SECRET** : `AWS_ACCESS_KEY`
+
+- **Name**: `AWS_SECRET_KEY`
+- **Link to SECRET** : `AWS_SECRET_KEY`
+
+<img
+alt="Values and Secrets"
+src={useBaseUrl('/img/chapter-2-app-services/valuesSecret.png')}
+width="400"
+border="1"
+/>
+
+
+## Add aws sdk dependency
+1. In your app services application navigate to "Functions" tab and click "Dependencies" tab.
+1. Click "Add New Dependency" and add the following dependency:
+```
+@aws-sdk/client-bedrock-runtime
+```
+1. Click "Add" and wait for it to be sucessfully added.
+
+
+## Create an Atlas trigger
+
+Since we want our embedding to be dynamic, we will use a trigger to join the data from the two sources and write it to a collection in our Atlas cluster.
+
+Navigate to the "Triggers" tab and click **Add a Trigger** by following this configuration:
+
+<img
+    alt="Trigger Setup"
+    src={useBaseUrl('/img/chapter-2-app-services/bedrockTrigger.png')}
+/>
+
+### Trigger code
+Choose **Function** type and in the dropdown click **New Function**. Add a name like `setEmbeddings` under **Function Name**.
+
+Copy paste the following code.
+```js
+// Header: MongoDB Atlas Function to Process Document Changes
+// Inputs: MongoDB changeEvent object
+// Outputs: Updates the MongoDB document with processing status and AWS model response
+
+exports = async function(changeEvent) {
+  // Connect to MongoDB service
+  var serviceName = "mongodb-atlas";
+  var dbName = changeEvent.ns.db;
+  var collName = changeEvent.ns.coll;
+
+  try {
+    var collection = context.services.get(serviceName).db(dbName).collection(collName);
+
+    // Set document status to 'pending'
+    await collection.updateOne({'_id' : changeEvent.fullDocument._id}, {$set : {processing : 'pending'}});
+
+    // AWS SDK setup for invoking models
+    const { BedrockRuntimeClient, InvokeModelCommand } = require("@aws-sdk/client-bedrock-runtime"); 
+    const client = new BedrockRuntimeClient({
+      region: 'us-east-1',
+      credentials: {
+        accessKeyId:  context.values.get('AWS_ACCESS_KEY'), 
+        secretAccessKey: context.values.get('AWS_SECRET_KEY')
+      },
+      model: "amazon.titan-embed-text-v1",
+    });
+
+    // Prepare embedding input from the change event
+    let embedInput = {}
+    if (changeEvent.fullDocument.details) {
+      embedInput['inputText'] = changeEvent.fullDocument.details
+    }
+    if (changeEvent.fullDocument.imgUrl) {
+      const imageResponse = await context.http.get({ url: changeEvent.fullDocument.imgUrl });
+      const imageBase64 = imageResponse.body.toBase64();
+      embedInput['inputImage'] = imageBase64
+    }
+
+    // AWS SDK call to process the embedding
+    const input = {
+      "modelId": "amazon.titan-embed-image-v1",
+      "contentType": "application/json",
+      "accept": "*/*",
+      "body": JSON.stringify(embedInput)
+    };
+
+    console.log(`before model invoke ${JSON.stringify(input)}`);
+    const command = new InvokeModelCommand(input);
+    const response = await client.send(command);
+      
+    // Parse and update the document with the response
+    const doc = JSON.parse(Buffer.from(response.body));
+    doc.processing = 'completed';
+    await collection.updateOne({'_id' : changeEvent.fullDocument._id}, {$set : doc});
+  
+  } catch(err) {
+    // Handle any errors in the process
+    console.error(err)
+  }
+};
+
+
+```
+
+**Save** + **Review Draft & Deploy**.
+
+A trigger running successfully will produce a collection in our Atlas cluster. You can navigate to **Data Services** > **Database** and  **Browse Collections** button on the cluster view, database name is `Bedrock` and collection `evidence`.
+
+_Please note that the trigger run will only happen when we insert data into `bedrock.evidence` collection and  might take a while the first time and therefore you can watch the **Logs** section on the App Services side_.

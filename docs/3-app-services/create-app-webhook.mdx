@@ -1,0 +1,304 @@
+---
+sidebar_position: 3
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+# Setup the backend logic
+
+Our main functionality will relay on a user HTTP endpoint which will orcestrate the logic of the game. The input from the user will be turned into a MultiModel embedding via AWS Titan multi model AI and will be passed to Atlas search to find the relevant document.
+ The document will be returned to the user along with a prompt that will engenieer a RAG response from Cohere LLM.
+
+ _Cohere LLM `cohere.command-light-text-v14` is part of the AWS Bedrock base model suite._
+
+
+## Create application search http endpoint
+
+1. On the **App Services** application navigate to **HTTPS Endpoints** section.
+1. Create a new POST endpoint by clicking **Add An Endpoint** with a path of `/getSearch`
+1. **Important!** toggle the **Response With Result** to **On**.
+1. The logic of this endpoint will get a "term" from the query string and search for that term, if no term is provided it will return first 15 results
+
+  <img
+        alt="Security quickstart page highlighting the 'Database' tab in the left-hand menu"
+        src={useBaseUrl('/img/chapter-2-app-services/httpSearchConfig.png')}
+        width="700"
+        border="1"
+    />
+4. Add under **Function** and **New Function** (name : `getSearch`) the following function logic:
+
+```js
+// Function Name : getSearch
+
+exports = async function({body}, response) {
+  // MongoDB and AWS SDK service setup
+  var serviceName = "mongodb-atlas";
+  var dbName = "bedrock";
+  var collName = "evidence";
+
+  var collection = context.services.get(serviceName).db(dbName).collection(collName);
+
+  const { BedrockRuntimeClient, InvokeModelCommand } = require("@aws-sdk/client-bedrock-runtime"); 
+
+  // Initialize AWS BedrockRuntimeClient
+  const client = new BedrockRuntimeClient({
+    region: 'us-east-1',
+    credentials: {
+      accessKeyId: context.values.get('AWS_ACCESS_KEY'), 
+      secretAccessKey: context.values.get('AWS_SECRET_KEY')
+    }
+  });
+
+  // Parsing input data
+  const { image, text, player } = JSON.parse(body.text());
+  console.log(`player : ${player}`);
+
+  try {
+    // Fetch player progress and story stage
+    const playerProgress = context.services.get(serviceName).db(dbName).collection("players");
+    let progress = await playerProgress.findOne({player: player});
+    progress.retry += 1;
+    console.log(`progress :  ${JSON.stringify(progress)}`);
+    
+
+
+    const story = context.services.get(serviceName).db(dbName).collection("story");
+    const currentStage = await story.findOne({stage: progress.stage});
+    console.log(`currentStage :  ${JSON.stringify(currentStage)}`);
+    
+    await playerProgress.updateOne({player: player}, {$set : {"retry" : progress.retry
+    }});
+
+    // Building query for AWS SDK
+    let query = {};
+    if (text) query['inputText'] = text;
+    if (image) query['inputImage'] = image;
+
+    const input = {
+      "modelId": "amazon.titan-embed-image-v1",
+      "contentType": "application/json",
+      "accept": "*/*",
+      "body": JSON.stringify(query)
+    };
+    console.log(`before model invoke ${JSON.stringify(input)}`);
+
+    // Invoking AWS model command
+    const command = new InvokeModelCommand(input);
+    const response = await client.send(command);
+
+    // Processing response and searching for evidence in MongoDB
+    const doc = JSON.parse(Buffer.from(response.body));
+    const evidence = await collection.aggregate([
+      {
+        "$vectorSearch": {
+          "queryVector": doc.embedding,
+          "index": "default",
+          "path": "embedding",
+          "numCandidates": 1,
+          "limit": 1
+        }
+      },
+      {"$project": {"embedding": 0}}
+    ]).toArray();
+
+    // Analyzing evidence against the current stage
+    let prompt, success = false;
+    console.log(evidence[0]._id);
+    console.log(JSON.stringify(currentStage.targetObjectIds));
+    if (currentStage.targetObjectIds.includes(evidence[0]._id.toString())) {
+       console.log("Document Found")
+     
+        prompt = ` Act as a crime investigator, Take the input document: ${JSON.stringify(evidence[0])} and summarize the findings`;
+      success = true;
+     
+    } else {
+      // Return the sulotion after 5 attempts
+       if(progress.retry > 4){
+          return [{ "document" : currentStage.solution, "imgUrl" : 'https://soundscout.s3.eu-central-1.amazonaws.com/lightball.png' }]
+        }
+         prompt = ` use one sentence and Act as a crime investigator, User did not get the needed document. You must first complete: ${currentStage.expectedDirection}  since you ended at: ${currentStage.rejection}. `;
+    }
+
+    // Generate text based on the prompt
+    const genQuery = {
+      "prompt": prompt,
+      "max_tokens": 512,
+      "temperature": 0
+    };
+
+    const textGenInput = {
+      "modelId": "cohere.command-light-text-v14",
+      "contentType": "application/json",
+      "accept": "*/*",
+      "body": JSON.stringify(genQuery)
+    };
+
+    const resCommand = new InvokeModelCommand(textGenInput);
+    const resResult = await client.send(resCommand);
+
+    // Processing the text generation result
+    const nextMove = JSON.parse(Buffer.from(resResult.body));
+    console.log(`Generation: ${nextMove.generations[0].text}`);
+    if (success) {
+      const retVal = {"document": nextMove.generations[0].text};
+      // Handle retry logic to know when to init retries
+      if (!currentStage.rollbackStage)
+          await playerProgress.updateOne({player: player}, { "$set" : { retry : 0}});
+          
+      await await playerProgress.updateOne({player: player}, {"$inc": {"stage": 1}});
+      
+      
+      if (currentStage.finish){
+        retVal.finish = currentStage.finish
+      }
+      return [{...evidence[0], ...retVal}];
+    }
+    else
+    {
+      if (currentStage.rollbackStage)
+      {
+         await playerProgress.updateOne({player: player}, {"$set" : {"stage" : currentStage.rollbackStage}});
+      }
+    }
+
+    return [{"text": nextMove.generations[0].text}];
+
+  } catch (err) {
+    console.error("Error: ", err);
+    throw err;
+  }
+};
+
+
+
+```
+_Please be aware that this logic will not fully work yet, as we need to setup the Atlas search index in the next section_
+
+Click **Save Draft** and follow the **Review Draft & Deploy** process.
+
+
+Make sure to keep the http **callback URL** as we will use it in our final chapter when consuming the data from the front end application.
+:::tip
+The url will usually look something like: `https://us-east-1.aws.data.mongodb-api.com/app/<APP-ID>/endpoint/getSearch`
+:::
+
+
+Finally, make sure that the function created (eg. getSearch) is on "SYSTEM" privilege for this demo.
+   <img
+        alt="Security quickstart page highlighting the 'Database' tab in the left-hand menu"
+        src={useBaseUrl('/img/chapter-1-mongodb-atlas/httpEndpoint.png')}
+        width="700"
+        border="1"
+    />
+
+This page can be accessed by going to the **Functions** tab and looking at **Settings** tab of the relevant function.
+
+## Import data into Atlas
+
+1.  Now we will import the data into Atlas from our [github repo](https://github.com/mongodb-developer/atlas-bedrock-crime-story-demo).
+1.  On the **Data Services** main tab click your cluster name.
+1.  Click **Collections** tab.
+
+We will start by going into "bedrock" databse and importing the "evidence" collection.
+
+1. Click "Insert Data" or "Add My Own Data" and switch to the document view. Paste the content of the ["evidence.json"](https://github.com/mongodb-developer/atlas-bedrock-crime-story-demo) file from the "data" folder in the repository. 
+1. Click "Insert" and wait for the data to be imported.
+ <img
+        alt="Insert data into the evidence collection"
+        src={useBaseUrl('/img/chapter-2-app-services/insertDocs.png')}
+        width="700"
+        border="1"
+    />
+1. Repeat the same process for the ["story.json"](https://github.com/mongodb-developer/atlas-bedrock-crime-story-demo) file in the "data" folder.
+
+## Create an endpoint to generate the Medal image to game winners
+
+We will use the app services to create an endpoint to generate the Medal image to game winners.
+
+Navigate to the **Endpoints** section and click **Add an Endpoint** by following this configuration:
+
+**Endpoint**
+- **Name**: `generateMedal`
+- **Path**: `/generateMedal`
+- **Method**: `POST`
+- **Resonse with Result**: `Yes`
+
+**Function**
+```js
+exports = async function({body}, response) {
+  // MongoDB and AWS SDK service setup
+  var serviceName = "mongodb-atlas";
+  var dbName = "bedrock";
+  var collName = "evidence";
+
+  var collection = context.services.get(serviceName).db(dbName).collection(collName);
+
+  const { BedrockRuntimeClient, InvokeModelCommand } = require("@aws-sdk/client-bedrock-runtime"); 
+
+  // Initialize AWS BedrockRuntimeClient
+  const client = new BedrockRuntimeClient({
+    region: 'us-east-1',
+    credentials: {
+      accessKeyId: context.values.get('AWS_ACCESS_KEY'), 
+      secretAccessKey: context.values.get('AWS_SECRET_KEY')
+    }
+  });
+
+  // Parsing input data
+  const {  text, player } = JSON.parse(body.text());
+  console.log(`player : ${player}`);
+
+  try {
+    // Fetch player progress and story stage
+    const playerProgress = context.services.get(serviceName).db(dbName).collection("players");
+    const progress = await playerProgress.findOne({player: player});
+    console.log(`progress :  ${JSON.stringify(progress)}`);
+
+    const story = context.services.get(serviceName).db(dbName).collection("story");
+    const currentStage = await story.findOne({stage: progress.stage});
+    console.log(`currentStage :  ${JSON.stringify(currentStage)}`);
+
+    // Building query for AWS SDK
+   
+
+    const input = {
+    "taskType": "TEXT_IMAGE",
+    "textToImageParams": {
+        "text": `Generate a medal of honor for a police acheivment that has the following attributes: ${text}`,
+        "negativeText":"No skew, no distroted no ugly"},
+    "imageGenerationConfig": {
+        "numberOfImages": 1,
+        "quality": "standard",
+        "height": 512,
+        "width": 512,
+        "cfgScale": 8.0,
+        "seed": 0
+     }
+   } 
+   
+    console.log(`before model invoke ${JSON.stringify(input)}`);
+    
+    const imgGenInput = {
+      "modelId": "amazon.titan-image-generator-v1",
+      "contentType": "application/json",
+      "accept": "application/json",
+      "body": JSON.stringify(input)
+    };
+
+    // Invoking AWS model command
+    const command = new InvokeModelCommand(imgGenInput);
+    const response = await client.send(command);
+
+    // Processing response and searching for evidence in MongoDB
+    const doc = JSON.parse(Buffer.from(response.body));
+    
+    return doc;
+
+  } catch (err) {
+    console.error("Error: ", err);
+    throw err;
+  }
+};
+```
+
+

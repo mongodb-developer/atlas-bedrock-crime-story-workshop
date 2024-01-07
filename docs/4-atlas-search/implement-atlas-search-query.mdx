@@ -1,0 +1,32 @@
+---
+sidebar_position: 2
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+# Atlas Search Query
+
+
+:::tip
+In this demo the Atlas search query is already implemented as part of the `getSearch` HTTP endpoint
+:::
+
+The HTTP endpoint `getSearch` implemented in chapter 3 already includes a search query.
+
+```js
+const evidence = await collection.aggregate([
+      {
+        "$vectorSearch": {
+          "queryVector": doc.embedding,
+          "index": "vector_index",
+          "path": "embedding",
+          "numCandidates": 1,
+          "limit": 1
+        }
+      },
+      {"$project": {"embedding": 0}}
+    ]).toArray();
+```
+
+With this code we are performing a vector search with whatever is placed in the "doc.embedding" variable on fields "embedding". 
+We look for just 1 document results and limiting the set for the first one.

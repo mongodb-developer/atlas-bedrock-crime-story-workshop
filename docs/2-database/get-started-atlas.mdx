@@ -1,0 +1,68 @@
+---
+sidebar_position: 1
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+# Get Started with MongoDB Atlas
+
+MongoDB Atlas is a developer data platform, integrating a multi-cloud database with a diverse set of data services. Atlas simplifies database deployment and management while enabling modern data-driven application development.
+
+## Register a new Atlas account
+
+You can start by register for MongoDB Atlas:
+
+1. With the [Atlas registration page](https://account.mongodb.com/account/register).
+
+## Deploy a free cluster
+
+Let’s deploy our first forever-free database in MongoDB Atlas! We’ll do that using the Atlas UI, so before starting, make sure you’re logged into your account.
+If you wish to use the CLI scroll to the botom of the page.
+
+
+### Atlas UI @ cloud.mongodb.com
+
+1. Click on the **Build a Database** button.
+
+    <img
+        alt="'Create a database' section in MongoDB Atlas highlighting the 'Build a database' button" 
+        src={useBaseUrl('/img/chapter-1-mongodb-atlas/create-a-database.png')}
+        width="500"
+    />
+
+1. Select **M0 Free**, Select a cloud provider and the region closest to your physical location. 
+Rename your cluster to **MyCluster** and hit **Create**.
+
+<img
+    alt="Cluster type selection page highlighting the shared cluster option"
+    src={useBaseUrl('/img/chapter-1-mongodb-atlas/select-cluster-type.png')}
+/>
+
+
+1. Use the following wizard to create a first user and passowrd. Finally take a note of your database user and password and for the sake of this workshop please have `0.0.0.0/0` temporarly whitelisted in the [IP Access List](https://www.mongodb.com/docs/atlas/security/ip-access-list/).
+    <img
+        alt="Security quickstart page highlighting the 'Database' tab in the left-hand menu"
+        src={useBaseUrl('/img/chapter-1-mongodb-atlas/security-quickstart-highlighted-database-button.png')}
+    />
+
+1. To navigate back to your deployments, select **Database** from the left-hand menu.
+Creating the cluster may take a couple of minutes. Once the deployment is complete, you'll see your first cluster in the list!
+
+<img
+    alt="The 'Database Deployments' page with a cluster named 'MyCluster'"
+    src={useBaseUrl('/img/chapter-1-mongodb-atlas/database-deployments.png')}
+/>
+
+:::tip
+The following CMD setup is an alternative way to the Atlas UI.
+:::
+### CMD Setup
+
+#### CLI Install
+- Follow the docs:
+https://www.mongodb.com/docs/atlas/cli/stable/install-atlas-cli/ 
+
+- Run the setup command and follow on screen instructions:
+```
+> atlas setup --clusterName MyCluster  --username <USER> --password <PASSWORD> --accessListIp "0.0.0.0/0"
+```

@@ -1,0 +1,36 @@
+---
+sidebar_position: 1
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+
+# Create an Atlas App Services application
+
+MongoDB Atlas, have a rich set of application services that allow a developer to host an entire application logic (Authentication, permissions, functions, triggers etc.) with a generous free tier.
+
+We will leverge this ability to stream line development and data integration in minutes of work.
+
+1. Start by navigating to the **App Services** tab.
+
+    <img
+        alt="Atlas navigation bar highlighting the 'App Services' tab"
+        src={useBaseUrl('/img/chapter-2-app-services/app-services-tab.png')}
+    />
+
+1. You’ll be prompted to select a starter template. Let’s go with the **Build your own App** option that’s already selected. Click the **Next** button. 
+1. Next, you need to configure your application.
+    - **Data Source**: Since we have created a single cluster, Atlas already linked it to our application.
+    - **(Optional) Application Name**: Let’s give our application a meaningful name such as **flyAirBNB**.
+    - **(Optional) App Deployment Model**: Change the deployment to **Single Region** and select the region closest to your physical location.
+1. Click the **Create App Service** button to create your first App Services application!
+1. Once the application is created we need to verify datasources are linked to our cluster, visit **Linked Data Sources** tab:
+    - Our atlas cluster with a linked name of `mongodb-atlas` 
+
+
+<img
+alt="Security quickstart page highlighting the 'Database' tab in the left-hand menu"
+src={useBaseUrl('/img/chapter-2-app-services/linkedSources2.png')}
+width="400"
+border="1"
+/>
