@@ -108,22 +108,23 @@ exports = async function({body}, response) {
     if (currentStage.targetObjectIds.includes(evidence[0]._id.toString())) {
        console.log("Document Found")
      
-        prompt = ` Act as a crime investigator, Take the input document: ${JSON.stringify(evidence[0])} and summarize the findings`;
+        prompt = `Use one sentence Act as crime like Sherlock Holmes, Take the input document: ${JSON.stringify(evidence[0])} and summarize the findings that helps ${currentStage.expectedDirection}`;
       success = true;
      
     } else {
       // Return the sulotion after 5 attempts
        if(progress.retry > 4){
-          return [{ "document" : currentStage.solution, "imgUrl" : 'https://soundscout.s3.eu-central-1.amazonaws.com/lightball.png' }]
+          return [{ "asisstant" : currentStage.solution, "imgUrl" : 'https://soundscout.s3.eu-central-1.amazonaws.com/lightball.png' }]
         }
-         prompt = ` use one sentence and Act as a crime investigator, User did not get the needed document. You must first complete: ${currentStage.expectedDirection}  since you ended at: ${currentStage.rejection}. `;
+         prompt = ` Use one sentence and Act as crime like Sherlock Holmes. User did not get the needed document, user retries is at ${progress.retry} out of 5, give a hint to reach ${currentStage.solution}
+         using expected direction of :  ${currentStage.expectedDirection} but start with slight hint on 1 and strong on 4.`// You must first complete: ${currentStage.expectedDirection}  since you ended at: ${currentStage.rejection}. `;
     }
 
     // Generate text based on the prompt
     const genQuery = {
       "prompt": prompt,
       "max_tokens": 512,
-      "temperature": 0
+      "temperature": 0.2
     };
 
     const textGenInput = {
@@ -140,7 +141,7 @@ exports = async function({body}, response) {
     const nextMove = JSON.parse(Buffer.from(resResult.body));
     console.log(`Generation: ${nextMove.generations[0].text}`);
     if (success) {
-      const retVal = {"document": nextMove.generations[0].text};
+      const retVal = {"assistant": nextMove.generations[0].text};
       // Handle retry logic to know when to init retries
       if (!currentStage.rollbackStage)
           await playerProgress.updateOne({player: player}, { "$set" : { retry : 0}});
@@ -159,9 +160,10 @@ exports = async function({body}, response) {
       {
          await playerProgress.updateOne({player: player}, {"$set" : {"stage" : currentStage.rollbackStage}});
       }
+     
     }
 
-    return [{"text": nextMove.generations[0].text}];
+    return [{"assistant": nextMove.generations[0].text}];
 
   } catch (err) {
     console.error("Error: ", err);
@@ -183,7 +185,7 @@ The url will usually look something like: `https://us-east-1.aws.data.mongodb-ap
 :::
 
 
-Finally, make sure that the function created (eg. getSearch) is on "SYSTEM" privilege for this demo.
+Make sure that the function created (eg. getSearch) is on "SYSTEM" privilege for this demo.
    <img
         alt="Security quickstart page highlighting the 'Database' tab in the left-hand menu"
         src={useBaseUrl('/img/chapter-1-mongodb-atlas/httpEndpoint.png')}
@@ -209,7 +211,7 @@ We will start by going into "bedrock" databse and importing the "evidence" colle
         width="700"
         border="1"
     />
-1. Repeat the same process for the ["story.json"](https://github.com/mongodb-developer/atlas-bedrock-crime-story-demo) file in the "data" folder.
+1. Repeat the same process for the ["story.json"](https://github.com/mongodb-developer/atlas-bedrock-crime-story-demo) file in the "data" folder to load into "Story".
 
 ## Create an endpoint to generate the Medal image to game winners
 
@@ -301,4 +303,118 @@ exports = async function({body}, response) {
 };
 ```
 
+Make sure that the function created (eg. getSearch) is on "SYSTEM" privilege for this demo.
+   <img
+        alt="Security quickstart page highlighting the 'Database' tab in the left-hand menu"
+        src={useBaseUrl('/img/chapter-1-mongodb-atlas/httpEndpoint.png')}
+        width="700"
+        border="1"
+    />
 
+This page can be accessed by going to the **Functions** tab and looking at **Settings** tab of the relevant function.
+
+## Create an endpoint to register users/ save and retrieve chats
+
+We will use the app services to create an endpoint to register users/ save and retrieve chats.
+
+1. `/registerUser` - will register a user and save it to the database
+
+Navigate to the **Endpoints** section and click **Add an Endpoint** by following this configuration:
+
+**Endpoint**
+- **Name**: `registerUser`
+- **Path**: `/registerUser`
+- **Method**: `POST`
+- **Resonse with Result**: `Yes`
+
+**Function**
+```js
+// This function is the endpoint's request handler.
+exports = async function({ query, headers, body}, response) {
+    // Data can be extracted from the request as follows:
+
+
+    // Raw request body (if the client sent one).
+    // This is a binary object that can be accessed as a string using .text()
+    const user = JSON.parse(body.text());
+    
+
+ 
+    // Querying a mongodb service:
+    const registration = await context.services.get("mongodb-atlas").db("bedrock").collection("players").updateOne({player: user.player},
+    {$set : {
+      player : user.player,
+      email : user.email
+    }, $setOnInsert : {stage: 0, retry: 0}},{upsert: true});
+
+
+    return registration;
+};
+```
+
+
+2. `/getChats` - will save a chat to the database
+
+**Endpoint**
+- **Name**: `getChats`
+- **Path**: `/getChats`
+- **Method**: `GET`
+- **Resonse with Result**: `Yes`
+
+**Function**
+```js
+// This function is the endpoint's request handler.
+exports = async function({ query, headers, body}, response) {
+    // Data can be extracted from the request as follows:
+
+  
+    const {player } = query;
+
+    // Querying a mongodb service:
+     const doc = await context.services.get("mongodb-atlas").db("bedrock").collection("players").findOne({"player" : player}, {messages : 1})
+
+    return doc;
+
+};
+```
+3. `/saveChats` - will save a chat to the database
+
+**Endpoint**
+- **Name**: `saveChats`
+- **Path**: `/saveChats`
+- **Method**: `POST`
+- **Resonse with Result**: `Yes`
+
+**Function**
+```js
+// This function is the endpoint's request handler.
+exports = async function({ query, headers, body}, response) {
+    // Data can be extracted from the request as follows:
+
+
+    // Headers, e.g. {"Content-Type": ["application/json"]}
+    const contentTypes = headers["Content-Type"];
+
+
+    const {player , messages } = JSON.parse(body.text());
+
+
+    // Querying a mongodb service:
+    const doc = await context.services.get("mongodb-atlas").db("bedrock").collection("players").findOneAndUpdate({player : player}, {$set : {messages : messages}}, {returnNewDocument : true});
+    
+
+
+   return doc;
+};
+```
+
+
+Make sure that all the functions created (eg. registerUser) is on "SYSTEM" privilege for this demo.
+   <img
+        alt="Security quickstart page highlighting the 'Database' tab in the left-hand menu"
+        src={useBaseUrl('/img/chapter-1-mongodb-atlas/httpEndpoint.png')}
+        width="700"
+        border="1"
+    />
+
+This page can be accessed by going to the **Functions** tab and looking at **Settings** tab of the relevant function.
