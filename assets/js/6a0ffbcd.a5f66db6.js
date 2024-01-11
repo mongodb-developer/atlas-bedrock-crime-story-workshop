@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkaws_bedrock_mongodb_atlas_workshop=self.webpackChunkaws_bedrock_mongodb_atlas_workshop||[]).push([[937],{5745:s=>{s.exports=JSON.parse('{"name":"docusaurus-plugin-content-pages","id":"default"}')}}]);
