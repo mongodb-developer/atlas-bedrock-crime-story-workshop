@@ -4,7 +4,7 @@
 // Change here to customise config
 
 // Name of the Github Repo, it's also teh baseUrl
-const workshopName = 'atlas-bedrock-crime-story-demo';
+const workshopName = 'atlas-bedrock-crime-story-workshop';
 // Change this if hosting outside mongodb-developer
 const organizationName = "mongodb-developer";
 
