@@ -97,7 +97,7 @@ function ContactDetailsPopup() {
       setIsRegistered(true);
 
       // Proceed with saving details and navigating
-      history.push('/docs/intro');
+      history.push('/atlas-bedrock-crime-story-workshop/docs/intro');
     } catch (error) {
       console.error('Registration failed:', error);
       // Handle the error or show an appropriate message
