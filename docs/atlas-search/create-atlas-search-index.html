@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://www.googletagmanager.com">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZJ28V71VTQ"></script>
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("js",new Date),gtag("config","G-ZJ28V71VTQ",{anonymize_ip:!0})</script><link rel="stylesheet" href="/atlas-bedrock-crime-story-workshop/assets/css/styles.7ed2dce9.css">
-<script src="/atlas-bedrock-crime-story-workshop/assets/js/runtime~main.6d12c53c.js" defer="defer"></script>
+<script src="/atlas-bedrock-crime-story-workshop/assets/js/runtime~main.4edec149.js" defer="defer"></script>
 <script src="/atlas-bedrock-crime-story-workshop/assets/js/main.607e6d54.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard" data-theme="light">
@@ -17,13 +17,11 @@
 <ol>
 <li>First navigate to your cluster &quot;Atlas Search&quot; section and press the &quot;Create Index&quot; button.</li>
 </ol>
-<img alt="Delete record prerequistes.  " src="/atlas-bedrock-crime-story-workshop/img/chapter-5-atlas-search/createIndexStart.png" width="700" style="box-shadow:5px 5px 5px #ccc" border="1px">
+<img alt="Delete record prerequistes.  " src="/atlas-bedrock-crime-story-workshop/img/chapter-5-atlas-search/createIndexStart1.png" width="700" style="box-shadow:5px 5px 5px #ccc" border="1px">
 <ol>
-<li>On the <strong>Data Services</strong> main tab click your cluster name.</li>
-<li>Click <strong>Atlas Search</strong> tab.</li>
 <li>Click <strong>Create Search Index</strong>.</li>
-<li>Chose the Atlas Vector Search Index.</li>
-<li>Select the &quot;Bedrock&quot; database and &quot;evidence&quot; collection.</li>
+<li>Chose the Atlas Vector Search Index and click &quot;Next&quot;.</li>
+<li>Select the &quot;bedrock&quot; database and &quot;evidence&quot; collection.</li>
 <li>Paste the following index definition:</li>
 </ol>
 <div class="codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">{</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">  &quot;fields&quot;: [</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">    {</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      &quot;type&quot;: &quot;vector&quot;,</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      &quot;path&quot;: &quot;embedding&quot;,</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      &quot;numDimensions&quot;: 1024,</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      &quot;similarity&quot;: &quot;dotProduct&quot;</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">    }</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">  ]</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">}</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
