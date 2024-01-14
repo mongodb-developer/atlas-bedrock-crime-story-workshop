@@ -15,7 +15,7 @@ You will need to get the HTTPS Endpoint URL we created as part of App Services s
 :::tip
 Just for a sanity check you can use our prebuilt environment:
 ```
-...
+https://us-east-1.aws.data.mongodb-api.com/app/application-0-itjak
 ```
 :::
 
@@ -31,10 +31,10 @@ We will use the following github repo to lunch codespaces from : https://github.
 1. Create a file called `.env` in the root of the project
 2. Add the following to the file:
 ```bash
-VUE_APP_BASE_APP_SERVICE_URL=<your app service url>
-VUE_APP_SEARCH_ENDPOINT='getImageSearch'
+VUE_APP_BASE_APP_SERVICE_URL='<your app service url>'
+VUE_APP_SEARCH_ENDPOINT='getSearch'
 VUE_APP_MEDAL_ENDPOINT='generateMedal'
-VUE_APP_REGISTER_ENDPOINT='registerPlayer'
+VUE_APP_REGISTER_ENDPOINT='registerUser'
 VUE_APP_SAVE_CHATS_ENDPOINT='saveChats'
 VUE_APP_GET_CHATS_ENDPOINT='getChats'
 ```

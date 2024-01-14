@@ -8,22 +8,50 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 
 We will use the app services to create a **Value** and a **Secret** for AWS access and secret keys to access our Bedrock modules.
 
-Navigate to the **Values** section and click **Add a Value** by following this configuration:
+Navigate to the **Values** section and click **Create New Value** by following this configuration:
 
 **Secrets**
-- **Name**: `AWS_ACCESS_KEY`
-- **Value**: `<YOUR_ACCESS_KEY>`
+<hr/>
+Input the following values with "Secret" type selected.
 
-- **Name**: `AWS_SECRET_KEY`
-- **Value**: `<YOUR_SECRET_KEY>`
+- **Name**: 
+```
+AWS_ACCESS_KEY
+```
 
-**Values**:
-- **Name**: `AWS_ACCESS_KEY`
+- **Value**: 
+```
+<YOUR AWS ACCESS KEY>
+```
+
+- **Name**: 
+```
+AWS_SECRET_KEY
+```
+
+- **Value**: 
+```
+<YOUR AWS SECRET>
+```
+<hr/>
+**Values**
+
+<hr/>
+
+Repeat the process to link the secrets to fetchable values.
+- **Name**: 
+```
+AWS_ACCESS_KEY
+```
+
 - **Link to SECRET** : `AWS_ACCESS_KEY`
 
-- **Name**: `AWS_SECRET_KEY`
+- **Name**: 
+```
+AWS_SECRET_KEY
+```
 - **Link to SECRET** : `AWS_SECRET_KEY`
-
+<hr/>
 <img
 alt="Values and Secrets"
 src={useBaseUrl('/img/chapter-2-app-services/valuesSecret.png')}
@@ -31,15 +59,17 @@ width="400"
 border="1"
 />
 
+Once done press "Review Draft & Deploy" and then "Deploy".
+
 
 ## Add aws sdk dependency
 1. In your app services application navigate to "Functions" tab and click "Dependencies" tab.
-1. Click "Add New Dependency" and add the following dependency:
+1. Click "Add Dependency" and add the following dependency:
 ```
 @aws-sdk/client-bedrock-runtime
 ```
-1. Click "Add" and wait for it to be sucessfully added.
-
+3. Click "Add" and wait for it to be sucessfully added.
+4. Once done press "Review Draft & Deploy" and then "Deploy".
 
 ## Create an Atlas trigger
 
@@ -122,6 +152,15 @@ exports = async function(changeEvent) {
 ```
 
 **Save** + **Review Draft & Deploy**.
+
+Now we need to set the function **setEmbeddings** as a SYSTEM function. Click on the **Functions** tab and then click on the **setEmbeddings** function, **Settings** tab. Change the Authentication to **System** and click **Save**.
+
+ <img
+        alt="System Function"
+        src={useBaseUrl('/img/chapter-1-mongodb-atlas/httpEndpoint.png')}
+        width="700"
+        border="1"
+    />
 
 A trigger running successfully will produce a collection in our Atlas cluster. You can navigate to **Data Services** > **Database** and  **Browse Collections** button on the cluster view, database name is `Bedrock` and collection `evidence`.
 

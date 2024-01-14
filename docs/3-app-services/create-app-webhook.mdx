@@ -92,7 +92,7 @@ exports = async function({body}, response) {
       {
         "$vectorSearch": {
           "queryVector": doc.embedding,
-          "index": "default",
+          "index": "vector_index",
           "path": "embedding",
           "numCandidates": 1,
           "limit": 1
@@ -203,7 +203,7 @@ This page can be accessed by going to the **Functions** tab and looking at **Set
 
 We will start by going into "bedrock" databse and importing the "evidence" collection.
 
-1. Click "Insert Data" or "Add My Own Data" and switch to the document view. Paste the content of the ["evidence.json"](https://raw.githubusercontent.com/mongodb-developer/atlas-bedrock-crime-story-demo/main/data/evidence.json) file from the "data" folder in the repository. 
+1. Click "Insert Dumcument" or "Add My Own Data" (if present) and switch to the document view. Paste the content of the ["evidence.json"](https://raw.githubusercontent.com/mongodb-developer/atlas-bedrock-crime-story-demo/main/data/evidence.json) file from the "data" folder in the repository. 
 1. Click "Insert" and wait for the data to be imported.
  <img
         alt="Insert data into the evidence collection"
@@ -211,13 +211,19 @@ We will start by going into "bedrock" databse and importing the "evidence" colle
         width="700"
         border="1"
     />
-1. Repeat the same process for the ["story.json"](https://raw.githubusercontent.com/mongodb-developer/atlas-bedrock-crime-story-demo/main/data/story.json) file in the "data" folder to load into "Story".
+1. Repeat the same process for the ["story.json"](https://raw.githubusercontent.com/mongodb-developer/atlas-bedrock-crime-story-demo/main/data/story.json) file in the "data" folder to load into database "bedrock" and collection "story".
 
+ <img
+        alt="Insert data into the story collection"
+        src={useBaseUrl('/img/chapter-2-app-services/createStory.png')}
+        width="700"
+        border="1"
+    />
 ## Create an endpoint to generate the Medal image to game winners
 
 We will use the app services to create an endpoint to generate the Medal image to game winners.
 
-Navigate to the **Endpoints** section and click **Add an Endpoint** by following this configuration:
+Navigate to App Services > Application and then **HTTP Endpoints** section and click **Add an Endpoint** by following this configuration:
 
 **Endpoint**
 - **Name**: `generateMedal`
@@ -226,6 +232,8 @@ Navigate to the **Endpoints** section and click **Add an Endpoint** by following
 - **Resonse with Result**: `Yes`
 
 **Function**
+
+Name : `generateMedal`
 ```js
 exports = async function({body}, response) {
   // MongoDB and AWS SDK service setup
@@ -328,6 +336,8 @@ Navigate to the **Endpoints** section and click **Add an Endpoint** by following
 - **Resonse with Result**: `Yes`
 
 **Function**
+
+Name : `registerUser`
 ```js
 // This function is the endpoint's request handler.
 exports = async function({ query, headers, body}, response) {
@@ -418,3 +428,13 @@ Make sure that all the functions created (eg. registerUser) is on "SYSTEM" privi
     />
 
 This page can be accessed by going to the **Functions** tab and looking at **Settings** tab of the relevant function.
+
+**Finaly** click **Save Draft** and follow the **Review Draft & Deploy** process.
+
+By the end of this chapter you should have the following endpoints:
+   <img
+        alt="Security quickstart page highlighting the 'Database' tab in the left-hand menu"
+        src={useBaseUrl('/img/chapter-2-app-services/finalEndpoints.png')}
+        width="700"
+        border="1"
+    />

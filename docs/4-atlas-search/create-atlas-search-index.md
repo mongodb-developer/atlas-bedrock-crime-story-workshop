@@ -14,17 +14,15 @@ Lets move back to the **Data Services** and **Database** tab.
 
 <img
       alt="Delete record prerequistes.  "
-      src={useBaseUrl('/img/chapter-5-atlas-search/createIndexStart.png')}
+      src={useBaseUrl('/img/chapter-5-atlas-search/createIndexStart1.png')}
       width="700"
       style={{boxShadow: '5px 5px 5px #ccc'}}
       border="1px"
   />
 
-1. On the **Data Services** main tab click your cluster name.
-1. Click **Atlas Search** tab.
 1. Click **Create Search Index**.
-1. Chose the Atlas Vector Search Index.
-1. Select the "Bedrock" database and "evidence" collection.
+1. Chose the Atlas Vector Search Index and click "Next".
+1. Select the "bedrock" database and "evidence" collection.
 1. Paste the following index definition:
 ```
 {
