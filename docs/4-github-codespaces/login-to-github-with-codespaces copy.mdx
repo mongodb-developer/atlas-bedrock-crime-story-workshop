@@ -1,0 +1,67 @@
+---
+sidebar_position: 1
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+
+
+# Github Spaces front end setup
+
+Its time to test our backend and data services. We will use the created search HTTPS endpoint to show a simple search page on our data.
+
+You will need to get the HTTPS Endpoint URL we created as part of App Services setup.
+
+:::tip
+Just for a sanity check you can use our prebuilt environment:
+```
+...
+```
+:::
+
+## Play with the front end
+
+We will use the following github repo to lunch codespaces from : https://github.com/mongodb-developer/atlas-bedrock-crime-story-demo
+
+1. Open the repo in github
+2. Click the green `Code` button
+3. Click `Codespaces` tab and `+` to create a new codespace.
+
+## Configure the front end
+1. Create a file called `.env` in the root of the project
+2. Add the following to the file:
+```bash
+VUE_APP_BASE_APP_SERVICE_URL=<your app service url>
+VUE_APP_SEARCH_ENDPOINT='getImageSearch'
+VUE_APP_MEDAL_ENDPOINT='generateMedal'
+VUE_APP_REGISTER_ENDPOINT='registerPlayer'
+VUE_APP_SAVE_CHATS_ENDPOINT='saveChats'
+VUE_APP_GET_CHATS_ENDPOINT='getChats'
+```
+
+## Install the front end
+1. Install the dependencies
+```bash
+npm install
+```
+1. Install `serve`
+```bash
+npm install -g serve
+```
+
+## Build the front end
+1. Build the front end
+```bash
+npm run build
+```
+
+## Run the front end
+1. Run the front end
+```bash
+serve -s dist/
+```
+
+## Test the front end
+1. Open the browser to the URL provided by `serve` in  popup
+
+
