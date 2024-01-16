@@ -30,6 +30,8 @@ Our main functionality will relay on a user HTTP endpoint which will orcestrate 
 ```js
 // Function Name : getSearch
 
+// Function Name : getSearch
+
 exports = async function({body}, response) {
   // MongoDB and AWS SDK service setup
   var serviceName = "mongodb-atlas";
@@ -94,7 +96,7 @@ exports = async function({body}, response) {
           "queryVector": doc.embedding,
           "index": "vector_index",
           "path": "embedding",
-          "numCandidates": 1,
+          "numCandidates": 10,
           "limit": 1
         }
       },
@@ -108,7 +110,7 @@ exports = async function({body}, response) {
     if (currentStage.targetObjectIds.includes(evidence[0]._id.toString())) {
        console.log("Document Found")
      
-        prompt = `Use one sentence Act as crime like Sherlock Holmes, Take the input document: ${JSON.stringify(evidence[0])} and summarize the findings that helps ${currentStage.expectedDirection}`;
+        prompt = `[INST] Don't output more than one simple sentence Act as crime investigator/INST], Take the input document: ${JSON.stringify(evidence[0])} and summarize the findings that helps ${currentStage.expectedDirection} as Sherlock Holmes`;
       success = true;
      
     } else {
@@ -116,15 +118,15 @@ exports = async function({body}, response) {
        if(progress.retry > 4){
           return [{ "asisstant" : currentStage.solution, "imgUrl" : 'https://soundscout.s3.eu-central-1.amazonaws.com/lightball.png' }]
         }
-         prompt = ` Use one sentence and Act as crime like Sherlock Holmes. User did not get the needed document, user retries is at ${progress.retry} out of 5, give a hint to reach ${currentStage.solution}
-         using expected direction of :  ${currentStage.expectedDirection} but start with slight hint on 1 and strong on 4.`// You must first complete: ${currentStage.expectedDirection}  since you ended at: ${currentStage.rejection}. `;
+         prompt = ` [INST] Don't output more than one simple sentence User did not get the needed document rejected by ${currentStage.rejection}, user retries is at ${progress.retry} out of 5, [/INST].
+         Considering user input ${text ? text : 'image'} and help the user to ${currentStage.expectedDirection[progress.retry - 1]} `
     }
 
     // Generate text based on the prompt
     const genQuery = {
       "prompt": prompt,
       "max_tokens": 512,
-      "temperature": 0.2
+      "temperature": 0
     };
 
     const textGenInput = {
@@ -139,7 +141,7 @@ exports = async function({body}, response) {
 
     // Processing the text generation result
     const nextMove = JSON.parse(Buffer.from(resResult.body));
-    console.log(`Generation: ${nextMove.generations[0].text}`);
+    console.log(`Generation: ${JSON.stringify(nextMove.generations)}`);
     if (success) {
       const retVal = {"assistant": nextMove.generations[0].text};
       // Handle retry logic to know when to init retries
@@ -170,6 +172,9 @@ exports = async function({body}, response) {
     throw err;
   }
 };
+
+
+
 
 
 
