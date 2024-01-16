@@ -1,0 +1,288 @@
+---
+sidebar_position: 3
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+# Setup the backend logic
+
+Our main functionality will relay on a user HTTP endpoint which will orcestrate the logic of the game. The input from the user will be turned into a MultiModel embedding via AWS Titan multi model AI and will be passed to Atlas search to find the relevant document.
+ The document will be returned to the user along with a prompt that will engenieer a RAG response from Cohere LLM.
+
+ _Cohere LLM `cohere.command-light-text-v14` is part of the AWS Bedrock base model suite._
+
+
+## Create application search http endpoint
+
+1. On the **App Services** application navigate to **HTTPS Endpoints** section.
+1. Create a new POST endpoint by clicking **Add An Endpoint** with a path of `/getSearch`
+1. **Important!** toggle the **Response With Result** to **On**.
+1. The logic of this endpoint will get a "term" from the query string and search for that term, if no term is provided it will return first 15 results
+
+  <img
+        alt="Security quickstart page highlighting the 'Database' tab in the left-hand menu"
+        src={useBaseUrl('/img/chapter-2-app-services/httpSearchConfig.png')}
+        width="700"
+        border="1"
+    />
+4. Add under **Function** and **New Function** (name : `getProducts`) the following function logic:
+
+```js
+// Function Name : getProducts
+
+exports = async function({body}, response) {
+  // MongoDB and AWS SDK service setup
+  var serviceName = "mongodb-atlas";
+  var dbName = "bedrock";
+  var collName = "products";
+
+  var collection = context.services.get(serviceName).db(dbName).collection(collName);
+
+  const { BedrockRuntimeClient, InvokeModelCommand } = require("@aws-sdk/client-bedrock-runtime"); 
+
+  // Initialize AWS BedrockRuntimeClient
+  const client = new BedrockRuntimeClient({
+    region: 'us-east-1',
+    credentials: {
+      accessKeyId: context.values.get('AWS_ACCESS_KEY'), 
+      secretAccessKey: context.values.get('AWS_SECRET_KEY')
+    }
+  });
+
+  // Parsing input data
+  const { image, text} = JSON.parse(body.text());
+
+
+  try {
+ 
+    // Building query for AWS SDK
+    let query = {};
+    if (text) query['inputText'] = text;
+    if (image) query['inputImage'] = image;
+    
+    
+    const input = {
+      "modelId": "amazon.titan-embed-image-v1",
+      "contentType": "application/json",
+      "accept": "*/*",
+      "body": JSON.stringify(query)
+    };
+    console.log(`before model invoke ${JSON.stringify(input)}`);
+
+    // Invoking AWS model command
+    const command = new InvokeModelCommand(input);
+    const response = await client.send(command);
+
+    // Processing response and searching for evidence in MongoDB
+    const doc = JSON.parse(Buffer.from(response.body));
+    const items = await collection.aggregate([
+      {
+        "$vectorSearch": {
+          "queryVector": doc.embedding,
+          "index": "vector_index",
+          "path": "embedding",
+          "numCandidates": 15,
+          "limit": 10
+        }
+      },
+      {"$project": {"embedding": 0}}
+    ]).toArray();
+    
+    console.log(JSON.stringify(items));
+
+    // Analyzing evidence against the current stage
+    let prompt, success = true;
+     prompt = `In one simple sentence Take the input document: ${JSON.stringify(items[0])} and summarize the findings`;
+
+    // Generate text based on the prompt
+    const genQuery = {
+      "prompt": prompt,
+      "temperature": 0
+    };
+
+    const textGenInput = {
+      "modelId": "cohere.command-light-text-v14",
+      "contentType": "application/json",
+      "accept": "*/*",
+      "body": JSON.stringify(genQuery)
+    };
+
+    const resCommand = new InvokeModelCommand(textGenInput);
+    const resResult = await client.send(resCommand);
+
+    // Processing the text generation result
+    const nextMove = JSON.parse(Buffer.from(resResult.body));
+  
+    if (success) {
+      const retVal = {"assistant": nextMove.generations[0].text};
+      return [{...items[0], ...retVal}];
+    }
+
+
+  } catch (err) {
+    console.error("Error: ", err);
+    throw err;
+  }
+};
+
+
+
+
+```
+_Please be aware that this logic will not fully work yet, as we need to setup the Atlas search index in the next section_
+
+Click **Save Draft** and follow the **Review Draft & Deploy** process.
+
+
+Make sure to keep the http **callback URL** as we will use it in our final chapter when consuming the data from the front end application.
+:::tip
+The url will usually look something like: `https://us-east-1.aws.data.mongodb-api.com/app/<APP-ID>/endpoint/getSearch`
+:::
+
+
+Make sure that the function created (eg. getProducts) is on "SYSTEM" privilege for this demo.
+   <img
+        alt="Security quickstart page highlighting the 'Database' tab in the left-hand menu"
+        src={useBaseUrl('/img/chapter-1-mongodb-atlas/httpEndpoint.png')}
+        width="700"
+        border="1"
+    />
+
+This page can be accessed by going to the **Functions** tab and looking at **Settings** tab of the relevant function.
+
+## Import data into Atlas
+
+1.  Now we will import the data into Atlas from our [github repo](https://github.com/mongodb-developer/atlas-bedrock-crime-story-demo).
+1.  On the **Data Services** main tab click your cluster name.
+1.  Click **Collections** tab.
+
+We will start by going into "bedrock" databse and importing the "products" collection.
+
+1. Click "Insert Dumcument" or "Add My Own Data" (if present) and switch to the document view. Paste the content of the ["products.json"](https://raw.githubusercontent.com/mongodb-developer/atlas-bedrock-crime-story-demo/main/data/products.json) file from the "data" folder in the repository. 
+1. Click "Insert" and wait for the data to be imported.
+ <img
+        alt="Insert data into the evidence collection"
+        src={useBaseUrl('/img/chapter-2-app-services/insertDocs.png')}
+        width="700"
+        border="1"
+    />
+
+
+## Create an endpoint to register users/ save and retrieve chats
+
+We will use the app services to create an endpoint to register users/ save and retrieve chats.
+
+1. `/registerUser` - will register a user and save it to the database
+
+Navigate to the **Endpoints** section and click **Add an Endpoint** by following this configuration:
+
+**Endpoint**
+- **Name**: `registerUser`
+- **Path**: `/registerUser`
+- **Method**: `POST`
+- **Resonse with Result**: `Yes`
+
+**Function**
+
+Name : `registerUser`
+```js
+// This function is the endpoint's request handler.
+exports = async function({ query, headers, body}, response) {
+    // Data can be extracted from the request as follows:
+
+
+    // Raw request body (if the client sent one).
+    // This is a binary object that can be accessed as a string using .text()
+    const user = JSON.parse(body.text());
+    
+
+ 
+    // Querying a mongodb service:
+    const registration = await context.services.get("mongodb-atlas").db("bedrock").collection("players").updateOne({player: user.player},
+    {$set : {
+      player : user.player,
+      email : user.email
+    }, $setOnInsert : {stage: 0, retry: 0}},{upsert: true});
+
+
+    return registration;
+};
+```
+
+
+2. `/getChats` - will save a chat to the database
+
+**Endpoint**
+- **Name**: `getChats`
+- **Path**: `/getChats`
+- **Method**: `GET`
+- **Resonse with Result**: `Yes`
+
+**Function**
+```js
+// This function is the endpoint's request handler.
+exports = async function({ query, headers, body}, response) {
+    // Data can be extracted from the request as follows:
+
+  
+    const {player } = query;
+
+    // Querying a mongodb service:
+     const doc = await context.services.get("mongodb-atlas").db("bedrock").collection("players").findOne({"player" : player}, {messages : 1})
+
+    return doc;
+
+};
+```
+3. `/saveChats` - will save a chat to the database
+
+**Endpoint**
+- **Name**: `saveChats`
+- **Path**: `/saveChats`
+- **Method**: `POST`
+- **Resonse with Result**: `Yes`
+
+**Function**
+```js
+// This function is the endpoint's request handler.
+exports = async function({ query, headers, body}, response) {
+    // Data can be extracted from the request as follows:
+
+
+    // Headers, e.g. {"Content-Type": ["application/json"]}
+    const contentTypes = headers["Content-Type"];
+
+
+    const {player , messages } = JSON.parse(body.text());
+
+
+    // Querying a mongodb service:
+    const doc = await context.services.get("mongodb-atlas").db("bedrock").collection("players").findOneAndUpdate({player : player}, {$set : {messages : messages}}, {returnNewDocument : true});
+    
+
+
+   return doc;
+};
+```
+
+
+Make sure that all the functions created (eg. registerUser) is on "SYSTEM" privilege for this demo.
+   <img
+        alt="Security quickstart page highlighting the 'Database' tab in the left-hand menu"
+        src={useBaseUrl('/img/chapter-1-mongodb-atlas/httpEndpoint.png')}
+        width="700"
+        border="1"
+    />
+
+This page can be accessed by going to the **Functions** tab and looking at **Settings** tab of the relevant function.
+
+**Finaly** click **Save Draft** and follow the **Review Draft & Deploy** process.
+
+By the end of this chapter you should have the following endpoints:
+**Ignore "Generate Medal"**
+   <img
+        alt="Security quickstart page highlighting the 'Database' tab in the left-hand menu"
+        src={useBaseUrl('/img/chapter-2-app-services/finalEndpoints.png')}
+        width="700"
+        border="1"
+    />

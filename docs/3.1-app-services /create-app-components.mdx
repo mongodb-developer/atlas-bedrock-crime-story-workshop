@@ -83,6 +83,9 @@ Since we want our embedding to be dynamic, we will use a trigger to join the dat
 
 Navigate to the "Triggers" tab and click **Add a Trigger** by following this configuration:
 
+- **Choose Database** : bedrock
+- **Collection** : products
+
 <img
     alt="Trigger Setup"
     src={useBaseUrl('/img/chapter-2-app-services/bedrockTrigger.png')}
@@ -122,8 +125,8 @@ exports = async function(changeEvent) {
 
     // Prepare embedding input from the change event
     let embedInput = {}
-    if (changeEvent.fullDocument.details) {
-      embedInput['inputText'] = changeEvent.fullDocument.details
+    if (changeEvent.fullDocument.title) {
+      embedInput['inputText'] = changeEvent.fullDocument.title
     }
     if (changeEvent.fullDocument.imgUrl) {
       const imageResponse = await context.http.get({ url: changeEvent.fullDocument.imgUrl });
