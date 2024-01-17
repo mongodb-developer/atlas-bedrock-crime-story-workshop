@@ -30,8 +30,6 @@ Our main functionality will relay on a user HTTP endpoint which will orcestrate 
 ```js
 // Function Name : getSearch
 
-// Function Name : getSearch
-
 exports = async function({body}, response) {
   // MongoDB and AWS SDK service setup
   var serviceName = "mongodb-atlas";
@@ -85,11 +83,11 @@ exports = async function({body}, response) {
     console.log(`before model invoke ${JSON.stringify(input)}`);
 
     // Invoking AWS model command
-    const command = new InvokeModelCommand(input);
-    const response = await client.send(command);
+    const embedCommand = new InvokeModelCommand(input);
+    const embedResponse = await client.send(embedCommand);
 
     // Processing response and searching for evidence in MongoDB
-    const doc = JSON.parse(Buffer.from(response.body));
+    const doc = JSON.parse(Buffer.from(embedResponse.body));
     const evidence = await collection.aggregate([
       {
         "$vectorSearch": {
@@ -105,8 +103,7 @@ exports = async function({body}, response) {
 
     // Analyzing evidence against the current stage
     let prompt, success = false;
-    console.log(evidence[0]._id);
-    console.log(JSON.stringify(currentStage.targetObjectIds));
+  
     if (currentStage.targetObjectIds.includes(evidence[0]._id.toString())) {
        console.log("Document Found")
      
@@ -148,7 +145,7 @@ exports = async function({body}, response) {
       if (!currentStage.rollbackStage)
           await playerProgress.updateOne({player: player}, { "$set" : { retry : 0}});
           
-      await await playerProgress.updateOne({player: player}, {"$inc": {"stage": 1}});
+      await playerProgress.updateOne({player: player}, {"$inc": {"stage": 1}});
       
       
       if (currentStage.finish){
@@ -172,8 +169,6 @@ exports = async function({body}, response) {
     throw err;
   }
 };
-
-
 
 
 

@@ -29,18 +29,10 @@ Our main functionality will relay on a user HTTP endpoint which will orcestrate 
 
 ```js
 // Function Name : getProducts
-
-exports = async function({body}, response) {
-  // MongoDB and AWS SDK service setup
-  var serviceName = "mongodb-atlas";
-  var dbName = "bedrock";
-  var collName = "products";
-
-  var collection = context.services.get(serviceName).db(dbName).collection(collName);
-
-  const { BedrockRuntimeClient, InvokeModelCommand } = require("@aws-sdk/client-bedrock-runtime"); 
-
-  // Initialize AWS BedrockRuntimeClient
+exports = async function({ body }, response) {
+  
+  // Import required SDKs and initialize AWS BedrockRuntimeClient
+  const { BedrockRuntimeClient, InvokeModelCommand } = require("@aws-sdk/client-bedrock-runtime");
   const client = new BedrockRuntimeClient({
     region: 'us-east-1',
     credentials: {
@@ -48,76 +40,114 @@ exports = async function({body}, response) {
       secretAccessKey: context.values.get('AWS_SECRET_KEY')
     }
   });
+  
+  // MongoDB and AWS SDK service setup
+  const serviceName = "mongodb-atlas";
+  const dbName = "bedrock";
+  const collName = "products";
+  const collection = context.services.get(serviceName).db(dbName).collection(collName);
+
+
+  // Function to run AWS model command
+  async function runModel(command, body) {
+    command.body = JSON.stringify(body);
+    const listCmd = new InvokeModelCommand(command);
+    const listResponse = await client.send(listCmd);
+    return JSON.parse(Buffer.from(listResponse.body));
+  }
+  
+  // Function to generate list query for text input
+function generateListQuery(text) {
+  const listDescPrompt = `Please build a json only list (can be 1 item) eg. {productList : [{"product" : "<NAME>" , "quantity" : <NUMBER>}]} stop output after json fully generated. 
+      The list for ${text}. Complete {productList : `;
+  return {
+    "prompt": listDescPrompt,
+    "temperature": 0
+  };
+}
+
+// Function to process list items
+async function processListItems(productList, embedCmd) {
+  let retDocuments = [];
+  for (const product of productList) {
+    const embedBody = { 'inputText': product.product };
+    const resEmbedding = await runModel(embedCmd, embedBody);
+    const items = await collection.aggregate([
+      vectorSearchQuery(resEmbedding.embedding), {"$project" : {"embedding" : 0}}
+    ]).toArray();
+    retDocuments.push(items[0]);
+  }
+  return retDocuments;
+}
+
+// Function to process a single item
+async function processSingleItem(doc) {
+  const items = await collection.aggregate([
+    vectorSearchQuery(doc.embedding), {"$project" : {"embedding" : 0}}]).toArray();
+  return items;
+}
+
+// Function to create vector search query
+function vectorSearchQuery(embedding) {
+  return {
+    "$vectorSearch": {
+      "queryVector": embedding,
+      "index": "vector_index",
+      "path": "embedding",
+      "numCandidates": 15,
+      "limit": 1
+    }
+  };
+}
 
   // Parsing input data
-  const { image, text} = JSON.parse(body.text());
-
+  const { image, text } = JSON.parse(body.text());
 
   try {
- 
-    // Building query for AWS SDK
-    let query = {};
-    if (text) query['inputText'] = text;
-    if (image) query['inputImage'] = image;
-    
-    
-    const input = {
+    let embedCmd = {
       "modelId": "amazon.titan-embed-image-v1",
       "contentType": "application/json",
-      "accept": "*/*",
-      "body": JSON.stringify(query)
+      "accept": "*/*"
     };
-    console.log(`before model invoke ${JSON.stringify(input)}`);
-
-    // Invoking AWS model command
-    const command = new InvokeModelCommand(input);
-    const response = await client.send(command);
-
-    // Processing response and searching for evidence in MongoDB
-    const doc = JSON.parse(Buffer.from(response.body));
-    const items = await collection.aggregate([
-      {
-        "$vectorSearch": {
-          "queryVector": doc.embedding,
-          "index": "vector_index",
-          "path": "embedding",
-          "numCandidates": 15,
-          "limit": 10
-        }
-      },
-      {"$project": {"embedding": 0}}
-    ]).toArray();
     
-    console.log(JSON.stringify(items));
+    // Process text input
+    if (text) {
+      const genList = generateListQuery(text);
+      const listResult = await runModel({ "modelId": "cohere.command-light-text-v14", "contentType": "application/json",
+      "accept": "*/*" }, genList);
+      const list = JSON.parse(listResult.generations[0].text);
+      console.log('list', JSON.stringify(list));
 
-    // Analyzing evidence against the current stage
-    let prompt, success = true;
-     prompt = `In one simple sentence Take the input document: ${JSON.stringify(items[0])} and summarize the findings`;
-
-    // Generate text based on the prompt
-    const genQuery = {
-      "prompt": prompt,
-      "temperature": 0
-    };
-
-    const textGenInput = {
-      "modelId": "cohere.command-light-text-v14",
-      "contentType": "application/json",
-      "accept": "*/*",
-      "body": JSON.stringify(genQuery)
-    };
-
-    const resCommand = new InvokeModelCommand(textGenInput);
-    const resResult = await client.send(resCommand);
-
-    // Processing the text generation result
-    const nextMove = JSON.parse(Buffer.from(resResult.body));
+      let retDocuments = await processListItems(list.productList, embedCmd);
+      console.log('retDocuments', JSON.stringify(retDocuments));
+       let prompt, success = true;
+       prompt = `In one simple sentence explain how the retrieved docs: ${JSON.stringify(retDocuments)} 
+       assisting in locating/creating: ${text}  `;
   
-    if (success) {
-      const retVal = {"assistant": nextMove.generations[0].text};
-      return [{...items[0], ...retVal}];
+      // Generate text based on the prompt
+         genQuery = {
+          "prompt": prompt,
+          "temperature": 0
+        };
+    
+         textGenInput = {
+          "modelId": "cohere.command-light-text-v14",
+          "contentType": "application/json",
+          "accept": "*/*"
+        };
+      
+        const assistantResponse = await runModel(textGenInput, genQuery);
+        console.log('assistant', JSON.stringify(assistantResponse));
+         retDocuments[0].assistant = assistantResponse.generations[0].text;
+      
+      return retDocuments;
     }
 
+    // Process image or other inputs
+    if (image) {
+      const doc = await runModel(embedCmd, { inputImage: image });
+      return await processSingleItem(doc);
+    }
 
   } catch (err) {
     console.error("Error: ", err);
