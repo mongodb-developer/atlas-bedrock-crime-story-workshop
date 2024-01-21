@@ -29,6 +29,7 @@ Our main functionality will relay on a user HTTP endpoint which will orcestrate 
 
 ```js
 // Function Name : getProducts
+
 exports = async function({ body }, response) {
   
   // Import required SDKs and initialize AWS BedrockRuntimeClient
@@ -51,14 +52,18 @@ exports = async function({ body }, response) {
   // Function to run AWS model command
   async function runModel(command, body) {
     command.body = JSON.stringify(body);
+     console.log(`before running ${command.modelId} and prompt ${body.prompt}`)
     const listCmd = new InvokeModelCommand(command);
+    console.log(`after running ${command.modelId} and prompt ${body.prompt}`)
     const listResponse = await client.send(listCmd);
+    console.log('model body ret', JSON.stringify(JSON.parse(Buffer.from(listResponse.body))))
+    console.log('before return from runModel')
     return JSON.parse(Buffer.from(listResponse.body));
   }
   
   // Function to generate list query for text input
 function generateListQuery(text) {
-  const listDescPrompt = `Please build a json only list (can be 1 item) eg. {productList : [{"product" : "<NAME>" , "quantity" : <NUMBER>}]} stop output after json fully generated. 
+  const listDescPrompt = `Please build a json only output start with: {productList : [{"product" : "<NAME>" , "quantity" : <NUMBER>}]} stop output after json fully generated. 
       The list for ${text}. Complete {productList : `;
   return {
     "prompt": listDescPrompt,
@@ -70,6 +75,7 @@ function generateListQuery(text) {
 async function processListItems(productList, embedCmd) {
   let retDocuments = [];
   for (const product of productList) {
+    console.log('product', JSON.stringify(product))
     const embedBody = { 'inputText': product.product };
     const resEmbedding = await runModel(embedCmd, embedBody);
     const items = await collection.aggregate([
@@ -122,7 +128,7 @@ function vectorSearchQuery(embedding) {
       console.log('retDocuments', JSON.stringify(retDocuments));
        let prompt, success = true;
        prompt = `In one simple sentence explain how the retrieved docs: ${JSON.stringify(retDocuments)} 
-       assisting in locating/creating: ${text}  `;
+       and mention the searched ingridiants from list: ${JSON.stringify(list.productList)} `;
   
       // Generate text based on the prompt
          genQuery = {
@@ -154,7 +160,6 @@ function vectorSearchQuery(embedding) {
     throw err;
   }
 };
-
 
 
 
