@@ -94,7 +94,7 @@ exports = async function({body}, response) {
           "queryVector": doc.embedding,
           "index": "vector_index",
           "path": "embedding",
-          "numCandidates": 10,
+          "numCandidates": 5,
           "limit": 1
         }
       },
@@ -115,7 +115,7 @@ exports = async function({body}, response) {
        if(progress.retry > 4){
           return [{ "asisstant" : currentStage.solution, "imgUrl" : 'https://soundscout.s3.eu-central-1.amazonaws.com/lightball.png' }]
         }
-         prompt = ` [INST] Don't output more than one simple sentence User did not get the needed document rejected by ${currentStage.rejection}, user retries is at ${progress.retry} out of 5, [/INST].
+         prompt = ` [INST] Don't output more than one simple sentence as a crime investigator. User did not get the needed document rejected by ${currentStage.rejection}, user retries is at ${progress.retry} out of 5, [/INST].
          Considering user input ${text ? text : 'image'} and help the user to ${currentStage.expectedDirection[progress.retry - 1]} `
     }
 
@@ -169,7 +169,6 @@ exports = async function({body}, response) {
     throw err;
   }
 };
-
 
 
 
