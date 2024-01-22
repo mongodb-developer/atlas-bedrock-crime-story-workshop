@@ -12,7 +12,7 @@ const organizationName = "mongodb-developer";
 const title = "MongoDB Atlas and Web Development: Hands-on Workshop";
 const tagLine = "Learn about how easy it is to develop with Atlas and AWS Services";
 const startButtonTitle = "Start the Workshop";
-const favicon = "img/favicon.svg"
+const favicon = "img/favicon.ico"
 
 // Main Page Features
 const featureList = [
