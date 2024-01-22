@@ -122,8 +122,8 @@ exports = async function(changeEvent) {
 
     // Prepare embedding input from the change event
     let embedInput = {}
-    if (changeEvent.fullDocument.details) {
-      embedInput['inputText'] = changeEvent.fullDocument.details
+    if (changeEvent.fullDocument.description) {
+      embedInput['inputText'] = changeEvent.fullDocument.description
     }
     if (changeEvent.fullDocument.imgUrl) {
       const imageResponse = await context.http.get({ url: changeEvent.fullDocument.imgUrl });
@@ -153,6 +153,7 @@ exports = async function(changeEvent) {
     console.error(err)
   }
 };
+
 
 
 ```
