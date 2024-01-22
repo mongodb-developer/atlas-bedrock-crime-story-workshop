@@ -38,13 +38,6 @@ Rename your cluster to **MyCluster** and hit **Create**.
     src={useBaseUrl('/img/chapter-1-mongodb-atlas/select-cluster-type.png')}
 />
 
-
-1. Use the following wizard to create a first user and passowrd. Finally take a note of your database user and password and for the sake of this workshop please have `0.0.0.0/0` temporarly whitelisted in the [IP Access List](https://www.mongodb.com/docs/atlas/security/ip-access-list/).
-    <img
-        alt="Security quickstart page highlighting the 'Database' tab in the left-hand menu"
-        src={useBaseUrl('/img/chapter-1-mongodb-atlas/security-quickstart-highlighted-database-button.png')}
-    />
-
 1. To navigate back to your deployments, select **Database** from the left-hand menu.
 Creating the cluster may take a couple of minutes. Once the deployment is complete, you'll see your first cluster in the list!
 
@@ -64,5 +57,5 @@ https://www.mongodb.com/docs/atlas/cli/stable/install-atlas-cli/
 
 - Run the setup command and follow on screen instructions:
 ```
-> atlas setup --clusterName MyCluster  --username <USER> --password <PASSWORD> --accessListIp "0.0.0.0/0"
+> atlas setup --clusterName MyCluster  --username <USER> --password <PASSWORD> 
 ```
