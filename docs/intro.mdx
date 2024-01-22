@@ -1,3 +1,5 @@
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
 ---
 sidebar_position: 1
 ---
@@ -14,7 +16,33 @@ import TabItem from '@theme/TabItem';
 
 [MongoDB Atlas](https://www.mongodb.com/atlas/database) is the best way to deploy, manage, and grow MongoDB in the Cloud. Today, we will leverge the Atlas data platform to integrate AWS Bedrock AI Services , load the data with minimal code to an Atlas cluster and use Atlas Vector search capabilities to power a frontend Web UI.
 
-The Application we are building is a nice game of "find the criminal" using vector search capabilities on an Evidence database.
+The Application we are building is a nice game of "find the criminal" using vector search capabilities on an Evidence database. 
+The idea of the game is that users will be able to communicate with a chat bot acting as a crime investigator against a database of evidence. 
+
+The user will be able to upload images or text and those will be searched for similartity against MongoDB Atlas using Bedrock embeddings.The RAG part comes into play when the found documents will be piped into an LLM by Bedrock and the results will be returned to the user.
+   <img
+        alt="Vector Search Pattern"
+        src={useBaseUrl('/img/dribble-dots.gif')}
+    />
+
+The application will be built using the following technologies:
+- [MongoDB Atlas](https://www.mongodb.com/atlas/database)
+- [MongoDB Atlas App Services](https://www.mongodb.com/products/platform/atlas-app-services)
+- [AWS Bedrock](https://aws.amazon.com/bedrock/) AI Services
+- -  [Titan](https://aws.amazon.com/bedrock/titan/) Embeddings
+- -  [Cohere Command](https://aws.amazon.com/bedrock/cohere-command-embed/) LLM
+
+    <img
+        alt="Front end Application preview"
+        src={useBaseUrl('/img/appImage.png')}
+    />
+
+
+**Alternative to the game**
+
+If you are not interested in the game, you can still follow the tutorial and build a simple web application that will allow you to search for similar images in a database of products.
+
+Those chapters are marked with "Product Catalog" in the title.
 
 Even better, no prior knowledge of MongoDB or Node is required!
 
