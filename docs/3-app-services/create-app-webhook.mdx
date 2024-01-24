@@ -58,18 +58,17 @@ exports = async function({body}, response) {
     const playerProgress = context.services.get(serviceName).db(dbName).collection("players");
     let progress = await playerProgress.findOne({player: player});
     progress.retry += 1;
-    console.log(`progress :  ${JSON.stringify(progress)}`);
+    console.log(`User progress is at:  ${JSON.stringify(progress)}`);
     
 
 
     const story = context.services.get(serviceName).db(dbName).collection("story");
     const currentStage = await story.findOne({stage: progress.stage});
-    console.log(`currentStage :  ${JSON.stringify(currentStage)}`);
     
     await playerProgress.updateOne({player: player}, {$set : {"retry" : progress.retry
     }});
 
-    // Building query for AWS SDK
+    // Building query for AWS SDK to find evidence
     let query = {};
     if (text) query['inputText'] = text;
     if (image) query['inputImage'] = image;
@@ -103,11 +102,14 @@ exports = async function({body}, response) {
 
     // Analyzing evidence against the current stage
     let prompt, success = false;
-  
-    if (currentStage.targetObjectIds.includes(evidence[0]._id.toString())) {
+   console.log('expectedDoc', currentStage.targetObjectIds[0]);
+   console.log('actualDoc', evidence[0]._id.toString());
+
+  // Testing if correct evidance found
+    if (currentStage.targetObjectIds[0] === evidence[0]._id.toString()) {
        console.log("Document Found")
      
-        prompt = `[INST] Don't output more than one simple sentence Act as crime investigator/INST], Take the input document: ${JSON.stringify(evidence[0])} and summarize the findings that helps ${currentStage.expectedDirection} as Sherlock Holmes`;
+        prompt = `[INST] Don't output more than one simple sentence Act as crime investigator [/INST], Take the input document: ${JSON.stringify(evidence[0])} and summarize the findings that helps ${currentStage.expectedDirection} as Crime Investigator`;
       success = true;
      
     } else {
@@ -116,10 +118,10 @@ exports = async function({body}, response) {
           return [{ "asisstant" : currentStage.solution, "imgUrl" : 'https://soundscout.s3.eu-central-1.amazonaws.com/lightball.png' }]
         }
          prompt = ` [INST] Don't output more than one simple sentence as a crime investigator. User did not get the needed document rejected by ${currentStage.rejection}, user retries is at ${progress.retry} out of 5, [/INST].
-         Considering user input ${text ? text : 'image'} and help the user to ${currentStage.expectedDirection[progress.retry - 1]} `
+         Considering user input ${text ? text : 'image'}  help the user with the advice: ${currentStage.expectedDirection[progress.retry - 1]} `
     }
 
-    // Generate text based on the prompt
+    // Generate text based on the prompt to guide the user forward
     const genQuery = {
       "prompt": prompt,
       "max_tokens": 512,
@@ -138,7 +140,8 @@ exports = async function({body}, response) {
 
     // Processing the text generation result
     const nextMove = JSON.parse(Buffer.from(resResult.body));
-    console.log(`Generation: ${JSON.stringify(nextMove.generations)}`);
+   
+   // If we succeded inform the user and progress to next stage 
     if (success) {
       const retVal = {"assistant": nextMove.generations[0].text};
       // Handle retry logic to know when to init retries
@@ -169,7 +172,6 @@ exports = async function({body}, response) {
     throw err;
   }
 };
-
 
 
 ```
